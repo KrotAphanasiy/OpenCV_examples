@@ -9,6 +9,10 @@ red = (0, 0, 255)
 blue = (255, 0, 0)
 white = (255, 255, 255)
 
+x1 = 100
+y1 = 100
+x2 = 100
+y2 = 100
 cv.line(canvas, (0,0), (300, 300), green)
 cv.line(canvas, (0,300), (300, 0), red)
 cv.rectangle(canvas, (10,10), (60,60), green)

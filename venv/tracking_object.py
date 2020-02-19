@@ -1,10 +1,27 @@
 from collections import deque
-from imutils.video import VideoStream
 import numpy as np
 import argparse
 import cv2 as cv
 import imutils
 import time
+
+def set_ranges(event, x, y, flags, params):
+    if event == cv.EVENT_LBUTTONDBLCLK:
+        print(x,y)
+
+        (blue, green, red) = frame[y, x]
+        color = np.uint8([[[blue, green, red]]])
+        hsv_color = cv.cvtColor(color, cv.COLOR_BGR2HSV)
+        hue = hsv_color[0][0][0]
+
+        global  Lower, Upper
+
+        Lower = hue - 10
+        Upper = hue + 10
+
+
+        print(Lower, Upper)
+
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", required=False,
@@ -14,30 +31,29 @@ ap.add_argument("-b", "--buffer", required=False, type=int, default=64,
 args = vars(ap.parse_args())
 
 
-blueLower = (100, 100, 100)
-blueUpper = (120, 255, 255)
+Lower = 70
+Upper = 100
 pts = deque(maxlen=args["buffer"])
 
-if not args.get("video", False):
-    vs = VideoStream(0).start()
 
-else:
-    vs = cv.VideoCapture(args["video"])
+cap = cv.VideoCapture(0)
+cv.namedWindow("Frame")
+cv.setMouseCallback("Frame", set_ranges)
+
+#fourcc = cv.VideoWriter_fourcc(*'XVID')
+#out = cv.VideoWriter('output.avi',fourcc, 20.0, (640,480))
 
 time.sleep(2)
 
 while True:
-    frame = vs.read()
+    _, frame = cap.read()
 
-    frame = frame[1] if args.get("video", False) else frame
-    if frame is None:
-        break
-
-    frame = imutils.resize(frame, width=1080)
+    #frame = imutils.resize(frame, width=1080)
     blurred = cv.GaussianBlur(frame, (11, 11), 0)
     hsv = cv.cvtColor(blurred, cv.COLOR_BGR2HSV)
 
-    mask = cv.inRange(hsv, blueLower, blueUpper)
+    print(Lower, Upper)
+    mask = cv.inRange(hsv, np.uint8([Lower, 100, 100]), np.uint8([Upper, 255, 255]))
     mask = cv.erode(mask, None, iterations=2)
     mask = cv.dilate(mask, None, iterations=2)
 
@@ -52,9 +68,11 @@ while True:
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 
         if radius > 10:
-            cv.circle(frame, (int(x), int(y)), int(radius),
-                       (0, 255, 255), 2)
-            cv.circle(frame, center, 5, (0, 0, 255), -1)
+            x1 = x - radius - 10
+            y1 = y - radius - 10
+            x2 = x + radius + 10
+            y2 = y + radius + 10
+            cv.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
     pts.appendleft(center)
 
@@ -70,15 +88,14 @@ while True:
         cv.line(frame, pts[i - 1], pts[i], (0, 0, 255), thickness)
     # show the frame to our screen
     cv.imshow("Frame", frame)
-    key = cv.waitKey(1) & 0xFF
+    #out.write(frame)
+    key = cv.waitKey(1)
     # if the 'q' key is pressed, stop the loop
     if key == ord("q"):
         break
-# if we are not using a video file, stop the camera video stream
-if not args.get("video", False):
-    vs.stop()
-# otherwise, release the camera
-else:
-    vs.release()
+
+
+cap.release()
+#out.release()
 # close all windows
 cv.destroyAllWindows()
